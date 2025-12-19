@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { authRouter } from "./routes/auth";
+import { userRouter } from "./routes/user";
 import { rbacRouter } from "./routes/rbac";
 import { visitorCounter } from "./middleware/visitor";
 import { errorHandler } from "./middleware/error";
@@ -27,6 +28,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(visitorCounter);
 
 app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
 app.use("/api/rbac", rbacRouter);
 
 app.use(errorHandler);

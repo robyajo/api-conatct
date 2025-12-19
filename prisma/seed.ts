@@ -102,6 +102,50 @@ async function main() {
       updated_at: new Date(),
     },
   });
+  const manageUsersCreate = await prisma.permissions.upsert({
+    where: { slug: "users.create" },
+    update: {},
+    create: {
+      name: "Create Users",
+      slug: "users.create",
+      description: "Create users",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+  const manageUsersView = await prisma.permissions.upsert({
+    where: { slug: "users.view" },
+    update: {},
+    create: {
+      name: "View Users",
+      slug: "users.view",
+      description: "View users",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+  const manageUsersUpdate = await prisma.permissions.upsert({
+    where: { slug: "users.update" },
+    update: {},
+    create: {
+      name: "Update Users",
+      slug: "users.update",
+      description: "Update users",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+  const manageUsersDelete = await prisma.permissions.upsert({
+    where: { slug: "users.delete" },
+    update: {},
+    create: {
+      name: "Delete Users",
+      slug: "users.delete",
+      description: "Delete users",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 
   const manageRoles = await prisma.permissions.upsert({
     where: { slug: "roles.manage" },
@@ -218,8 +262,12 @@ async function main() {
 
   // 4. Assign permissions to roles
   const rolePermPairs: { roleId: bigint; permId: bigint }[] = [
-    // super_admin gets all
+    // super_admin gets all users permissions + other management permissions
     { roleId: superAdminRole.id, permId: manageUsers.id },
+    { roleId: superAdminRole.id, permId: manageUsersCreate.id },
+    { roleId: superAdminRole.id, permId: manageUsersView.id },
+    { roleId: superAdminRole.id, permId: manageUsersUpdate.id },
+    { roleId: superAdminRole.id, permId: manageUsersDelete.id },
     { roleId: superAdminRole.id, permId: manageRoles.id },
     { roleId: superAdminRole.id, permId: managePermissions.id },
     { roleId: superAdminRole.id, permId: manageProfiles.id },
@@ -229,8 +277,11 @@ async function main() {
     { roleId: superAdminRole.id, permId: postsView.id },
     { roleId: superAdminRole.id, permId: categoriesManage.id },
     { roleId: superAdminRole.id, permId: commentsManage.id },
-    // admin gets main management permissions
-    { roleId: adminRole.id, permId: manageUsers.id },
+    // admin gets users permissions except delete
+    { roleId: adminRole.id, permId: manageUsersCreate.id },
+    { roleId: adminRole.id, permId: manageUsersView.id },
+    { roleId: adminRole.id, permId: manageUsersUpdate.id },
+    // admin gets other management permissions
     { roleId: adminRole.id, permId: manageRoles.id },
     { roleId: adminRole.id, permId: managePermissions.id },
     { roleId: adminRole.id, permId: postsCreate.id },

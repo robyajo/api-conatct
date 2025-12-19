@@ -15,6 +15,26 @@ type ErrorBody<T = unknown> = {
   errors?: T;
 };
 
+function toJsonSafe(value: unknown): unknown {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => toJsonSafe(item));
+  }
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value)) {
+      result[key] = toJsonSafe(val);
+    }
+    return result;
+  }
+  return value;
+}
+
 export function sendSuccess<T>(
   res: Response,
   statusCode: number,
@@ -22,7 +42,7 @@ export function sendSuccess<T>(
   data: T
 ) {
   const body: SuccessBody<T> = { status: "success", message, data };
-  return res.status(statusCode).json(body);
+  return res.status(statusCode).json(toJsonSafe(body));
 }
 
 export function sendError<T = unknown>(
@@ -35,5 +55,5 @@ export function sendError<T = unknown>(
   if (errors !== undefined) {
     body.errors = errors;
   }
-  return res.status(statusCode).json(body);
+  return res.status(statusCode).json(toJsonSafe(body));
 }

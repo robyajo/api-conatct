@@ -15,7 +15,6 @@ import {
   removePermissionFromRole,
   assignPermissionToUser,
   removePermissionFromUser,
-  adminCreateUser,
 } from "../controllers/rbacController";
 
 export const rbacRouter = Router();
@@ -54,5 +53,3 @@ rbacRouter.post(
   requireAdmin,
   removePermissionFromUser
 );
-
-rbacRouter.post("/users", requireAdmin, adminCreateUser);

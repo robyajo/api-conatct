@@ -6,24 +6,22 @@ import slugify from "slugify";
 async function main() {
   console.log("Start seeding...");
 
-  // Fix Auto Increment Sequences
-  try {
-    const tables = ["users", "categori_posts", "posts", "comments"];
-    for (const table of tables) {
-      await prisma.$executeRawUnsafe(
-        `SELECT setval(pg_get_serial_sequence('${table}', 'id'), coalesce(max(id)+1, 1), false) FROM ${table};`
-      );
-      console.log(`Reset sequence for ${table}`);
-    }
-  } catch (error) {
-    console.warn(
-      "Failed to reset sequences, might be permissions or table structure:",
-      error
-    );
-  }
-
-  // 1. Create Users (Admin & User)
+  // 1. Create Users (Super Admin, Admin & User)
   const passwordHash = await bcrypt.hash("string", 10);
+
+  const superAdmin = await prisma.users.upsert({
+    where: { email: "sa@sa.com" },
+    update: {},
+    create: {
+      uuid: uuidv4(),
+      name: "Super Admin",
+      email: "sa@sa.com",
+      password: passwordHash,
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+  console.log(`Created super admin: ${superAdmin.name}`);
 
   const admin = await prisma.users.upsert({
     where: { email: "a@a.com" },
@@ -33,7 +31,6 @@ async function main() {
       name: "Admin User",
       email: "a@a.com",
       password: passwordHash,
-      role: "admin",
       created_at: new Date(),
       updated_at: new Date(),
     },
@@ -48,12 +45,248 @@ async function main() {
       name: "Regular User",
       email: "u@u.com",
       password: passwordHash,
-      role: "user",
       created_at: new Date(),
       updated_at: new Date(),
     },
   });
   console.log(`Created user: ${user.name}`);
+
+  // 2. Seed Roles
+  const superAdminRole = await prisma.roles.upsert({
+    where: { slug: "super_admin" },
+    update: {},
+    create: {
+      name: "Super Admin",
+      slug: "super_admin",
+      description: "Full access to all resources",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const adminRole = await prisma.roles.upsert({
+    where: { slug: "admin" },
+    update: {},
+    create: {
+      name: "Admin",
+      slug: "admin",
+      description: "Administrator",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const userRole = await prisma.roles.upsert({
+    where: { slug: "user" },
+    update: {},
+    create: {
+      name: "User",
+      slug: "user",
+      description: "Regular user",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  console.log("Seeded roles");
+
+  // 3. Seed Permissions
+  const manageUsers = await prisma.permissions.upsert({
+    where: { slug: "users.manage" },
+    update: {},
+    create: {
+      name: "Manage Users",
+      slug: "users.manage",
+      description: "Create, update, and delete users",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const manageRoles = await prisma.permissions.upsert({
+    where: { slug: "roles.manage" },
+    update: {},
+    create: {
+      name: "Manage Roles",
+      slug: "roles.manage",
+      description: "Create, update, and delete roles",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const managePermissions = await prisma.permissions.upsert({
+    where: { slug: "permissions.manage" },
+    update: {},
+    create: {
+      name: "Manage Permissions",
+      slug: "permissions.manage",
+      description: "Create, update, and delete permissions",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const manageProfiles = await prisma.permissions.upsert({
+    where: { slug: "profiles.manage" },
+    update: {},
+    create: {
+      name: "Manage Profiles",
+      slug: "profiles.manage",
+      description: "Manage user profiles",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  console.log("Seeded permissions");
+
+  // 4. Assign permissions to roles
+  const postsCreate = await prisma.permissions.upsert({
+    where: { slug: "posts.create" },
+    update: {},
+    create: {
+      name: "Create Posts",
+      slug: "posts.create",
+      description: "Create posts",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const postsUpdate = await prisma.permissions.upsert({
+    where: { slug: "posts.update" },
+    update: {},
+    create: {
+      name: "Update Posts",
+      slug: "posts.update",
+      description: "Update posts",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const postsDelete = await prisma.permissions.upsert({
+    where: { slug: "posts.delete" },
+    update: {},
+    create: {
+      name: "Delete Posts",
+      slug: "posts.delete",
+      description: "Delete posts",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const postsView = await prisma.permissions.upsert({
+    where: { slug: "posts.view" },
+    update: {},
+    create: {
+      name: "View Posts",
+      slug: "posts.view",
+      description: "View posts",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const categoriesManage = await prisma.permissions.upsert({
+    where: { slug: "categories.manage" },
+    update: {},
+    create: {
+      name: "Manage Categories",
+      slug: "categories.manage",
+      description: "Manage categories",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  const commentsManage = await prisma.permissions.upsert({
+    where: { slug: "comments.manage" },
+    update: {},
+    create: {
+      name: "Manage Comments",
+      slug: "comments.manage",
+      description: "Manage comments",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  console.log("Seeded resource permissions");
+
+  // 4. Assign permissions to roles
+  const rolePermPairs: { roleId: bigint; permId: bigint }[] = [
+    // super_admin gets all
+    { roleId: superAdminRole.id, permId: manageUsers.id },
+    { roleId: superAdminRole.id, permId: manageRoles.id },
+    { roleId: superAdminRole.id, permId: managePermissions.id },
+    { roleId: superAdminRole.id, permId: manageProfiles.id },
+    { roleId: superAdminRole.id, permId: postsCreate.id },
+    { roleId: superAdminRole.id, permId: postsUpdate.id },
+    { roleId: superAdminRole.id, permId: postsDelete.id },
+    { roleId: superAdminRole.id, permId: postsView.id },
+    { roleId: superAdminRole.id, permId: categoriesManage.id },
+    { roleId: superAdminRole.id, permId: commentsManage.id },
+    // admin gets main management permissions
+    { roleId: adminRole.id, permId: manageUsers.id },
+    { roleId: adminRole.id, permId: manageRoles.id },
+    { roleId: adminRole.id, permId: managePermissions.id },
+    { roleId: adminRole.id, permId: postsCreate.id },
+    { roleId: adminRole.id, permId: postsUpdate.id },
+    { roleId: adminRole.id, permId: postsDelete.id },
+    { roleId: adminRole.id, permId: postsView.id },
+    { roleId: adminRole.id, permId: categoriesManage.id },
+    { roleId: adminRole.id, permId: commentsManage.id },
+    // user gets read-only posts
+    { roleId: userRole.id, permId: postsView.id },
+  ];
+
+  for (const pair of rolePermPairs) {
+    await prisma.role_permissions.upsert({
+      where: {
+        role_id_permission_id: {
+          role_id: pair.roleId,
+          permission_id: pair.permId,
+        },
+      },
+      create: {
+        role_id: pair.roleId,
+        permission_id: pair.permId,
+        created_at: new Date(),
+      },
+      update: {},
+    });
+  }
+
+  console.log("Assigned permissions to roles");
+
+  // 5. Assign roles to users
+  const userRolePairs: { userId: bigint; roleId: bigint }[] = [
+    { userId: superAdmin.id, roleId: superAdminRole.id },
+    { userId: admin.id, roleId: adminRole.id },
+    { userId: user.id, roleId: userRole.id },
+  ];
+
+  for (const pair of userRolePairs) {
+    await prisma.user_roles.upsert({
+      where: {
+        user_id_role_id: {
+          user_id: pair.userId,
+          role_id: pair.roleId,
+        },
+      },
+      create: {
+        user_id: pair.userId,
+        role_id: pair.roleId,
+        created_at: new Date(),
+      },
+      update: {},
+    });
+  }
+
+  console.log("Assigned roles to users");
 
   const indoCities = [
     "Jakarta",
@@ -99,10 +332,24 @@ async function main() {
         name,
         email,
         password: passwordHash,
-        role: "user",
         created_at: new Date(),
         updated_at: new Date(),
       },
+    });
+
+    await prisma.user_roles.upsert({
+      where: {
+        user_id_role_id: {
+          user_id: userRecord.id,
+          role_id: userRole.id,
+        },
+      },
+      create: {
+        user_id: userRecord.id,
+        role_id: userRole.id,
+        created_at: new Date(),
+      },
+      update: {},
     });
 
     const city = indoCities[(i - 1) % indoCities.length];

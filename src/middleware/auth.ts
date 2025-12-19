@@ -39,3 +39,18 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     sendError(res, 401, "Invalid token");
   }
 }
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const user = (req as any).user as
+    | { userId: string; role: string }
+    | undefined;
+  if (!user) {
+    sendError(res, 401, "Unauthorized");
+    return;
+  }
+  if (user.role !== "admin" && user.role !== "super_admin") {
+    sendError(res, 403, "Forbidden");
+    return;
+  }
+  next();
+}
